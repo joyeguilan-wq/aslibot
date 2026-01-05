@@ -16,7 +16,7 @@ def run_flask():
     app.run(host='0.0.0.0', port=8080)
 
 # ۱. تنظیمات ربات (توکن خودت را بگذار)
-API_TOKEN = '8356352784:AAGJcxp84RRXLTNWZyh_KXFTBREht7S4Kmw'
+API_TOKEN = '8356352784:AAHHulSVXfA1HIt34LS5P6h6fCv9xGRB5jg'
 ADMIN_ID = 7189522324 
 
 bot = telebot.TeleBot(API_TOKEN)
