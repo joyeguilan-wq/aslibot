@@ -79,7 +79,7 @@ def reply_to_user(message):
         bot.send_message(ADMIN_ID, "⚠️ آیدی کاربر در حافظه نیست.")
 
 # شروع همزمان سرور وب و ربات
-if name == "main":
+if __name__ == "__main__":
     t = Thread(target=run_flask)
     t.daemon = True
     t.start()
