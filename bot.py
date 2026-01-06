@@ -29,7 +29,7 @@ def send_welcome(message):
     if message.chat.id == ADMIN_ID:
         bot.reply_to(message, "✅ <b>پنل مدیریت فعال شد.</b>", parse_mode='HTML')
     else:
-        bot.reply_to(message, "سلام! پیام خود را بفرستید تا پس از تایید مدیریت، در کانال قرار بگیرد.")
+        bot.reply_to(message, "سلام! پیامتو بفرست عموجویی میبینه.")
 
 @bot.message_handler(content_types=['text', 'photo', 'video', 'document', 'voice', 'video_note'])
 def handle_all_messages(message):
@@ -75,7 +75,7 @@ def handle_all_messages(message):
         bot.send_message(ADMIN_ID, "📝 <b>مدیریت:</b> برای پیام بالا چه تصمیمی می‌گیرید؟", reply_markup=markup, parse_mode='HTML')
         
         # پاسخ به کاربر
-        bot.reply_to(message, "✅ پیام شما با موفقیت برای مدیریت ارسال شد.")
+        bot.reply_to(message, "✅پیام شماره دست عموجویی رسید .")
     except Exception as e:
         print(f"Error in 3-step system: {e}")
 
