@@ -27,35 +27,34 @@ def run_flask():
 @bot.message_handler(commands=['start'])
 def send_welcome(message):
     if message.chat.id == ADMIN_ID:
-        bot.reply_to(message, "✅ **درود مدیریت!**\nربات با موفقیت فعال شد و ساعت آن بر اساس وقت تهران تنظیم گردید.")
+        bot.reply_to(message, "✅ <b>درود مدیریت!</b>\nربات آنلاین است و پیام‌های کاربران را برای شما می‌فرستد.", parse_mode='HTML')
     else:
         bot.reply_to(message, "سلام! پیام یا تصویر خود را بفرستید تا پس از تایید مدیریت، در کانال قرار بگیرد.")
 
 @bot.message_handler(content_types=['text', 'photo'])
 def handle_all_messages(message):
-    # پیام‌های خود شما (ادمین) نادیده گرفته می‌شود
+    # پیام‌های خود ادمین برای خودش فوروارد نمی‌شود
     if message.chat.id == ADMIN_ID:
         return
 
     user = message.from_user
-    
-    # تنظیم ساعت دقیق به وقت تهران
     tehran_tz = pytz.timezone('Asia/Tehran')
     now = datetime.datetime.now(tehran_tz)
     time_str = now.strftime('%H:%M:%S')
     
     chat_link = f"tg://user?id={user.id}"
     
+    # استفاده از HTML برای جلوگیری از ارور کاراکترهای خاص
     user_info = (
-        f"📩 **پیام جدید دریافت شد**\n"
+        f"📩 <b>پیام جدید دریافت شد</b>\n"
         f"--------------------------\n"
-        f"👤 **نام:** {user.first_name}\n"
-        f"👤 **فامیل:** {user.last_name or 'ندارد'}\n"
-        f"🆔 **آیدی عددی:** `{user.id}`\n"
-        f"🆔 **یوزرنیم:** @{user.username or 'ندارد'}\n"
-        f"🌐 **زبان:** {user.language_code or 'نامشخص'}\n"
-        f"⏰ **ساعت (تهران):** {time_str}\n\n"
-        f"🔗 [لینک چت مستقیم با کاربر]({chat_link})\n"
+        f"👤 <b>نام:</b> {user.first_name or '---'}\n"
+        f"👤 <b>فامیل:</b> {user.last_name or 'ندارد'}\n"
+        f"🆔 <b>آیدی:</b> <code>{user.id}</code>\n"
+        f"🆔 <b>یوزرنیم:</b> @{user.username or 'ندارد'}\n"
+        f"🌐 <b>زبان:</b> {user.language_code or '---'}\n"
+        f"⏰ <b>ساعت:</b> {time_str}\n\n"
+        f"🔗 <a href='{chat_link}'>ورود به پی‌وی کاربر</a>\n"
         f"--------------------------\n"
     )
 
@@ -66,13 +65,13 @@ def handle_all_messages(message):
 
     try:
         if message.text:
-            bot.send_message(ADMIN_ID, user_info + "📝 **متن پیام:**\n" + message.text, reply_markup=markup, parse_mode='Markdown')
+            bot.send_message(ADMIN_ID, user_info + "📝 <b>متن پیام:</b>\n" + message.text, reply_markup=markup, parse_mode='HTML')
         elif message.photo:
-            bot.send_photo(ADMIN_ID, message.photo[-1].file_id, caption=user_info + "🖼 **توضیحات عکس:**\n" + (message.caption or "بدون توضیح"), reply_markup=markup, parse_mode='Markdown')
+            bot.send_photo(ADMIN_ID, message.photo[-1].file_id, caption=user_info + "🖼 <b>توضیحات:</b>\n" + (message.caption or "بدون توضیح"), reply_markup=markup, parse_mode='HTML')
         
         bot.reply_to(message, "✅ پیام شما با موفقیت برای مدیریت ارسال شد.")
     except Exception as e:
-        print(f"Error: {e}")
+        print(f"Send Error: {e}")
 
 @bot.callback_query_handler(func=lambda call: True)
 def callback_query(call):
@@ -88,8 +87,8 @@ def callback_query(call):
                 bot.edit_message_caption(final_text, chat_id=ADMIN_ID, message_id=call.message.message_id)
             else:
                 bot.edit_message_text(final_text, chat_id=ADMIN_ID, message_id=call.message.message_id)
-        except Exception as e:
-            bot.answer_callback_query(call.id, "خطا در ارسال به کانال!")
+        except:
+            bot.answer_callback_query(call.id, "خطا در ارسال!")
     elif action == "rej":
         try:
             bot.delete_message(ADMIN_ID, call.message.message_id)
@@ -97,13 +96,12 @@ def callback_query(call):
         except: pass
 
 if __name__ == "__main__":
-    # اجرای Flask در پس‌زمینه
     Thread(target=run_flask, daemon=True).start()
     
-    # رفع تداخل ۴۰۹ و پاکسازی وب‌هوک
+    # پاکسازی وب‌هوک برای رفع ارور تداخل
     bot.remove_webhook()
-    time.sleep(1)
-
+    time.sleep(2)
+    
     print("--- Robot is Starting ---")
-    # استفاده از این دستور تداخل 409 رو به صورت خودکار حل می‌کنه
+    # استفاده از infinity_polling برای پایداری در رندر
     bot.infinity_polling(timeout=20, long_polling_timeout=10, skip_pending=True)
