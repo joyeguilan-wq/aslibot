@@ -11,6 +11,7 @@ import time
 API_TOKEN = '8331070970:AAHquQria2TRCjkRBoauQo1BYKMlUWZztZg'
 ADMIN_ID = 7189522324
 CHANNEL_ID = -1003630209623
+FOOTER_TEXT = "\n\n🆔 @uniguilancrush"
 # ======================================================
 
 bot = telebot.TeleBot(API_TOKEN)
@@ -27,7 +28,7 @@ def run_flask():
 @bot.message_handler(commands=['start'])
 def send_welcome(message):
     if message.chat.id == ADMIN_ID:
-        bot.reply_to(message, "✅ <b>مدیریت گرامی، ربات با سیستم ۳ مرحله‌ای و امضای کانال فعال شد.</b>", parse_mode='HTML')
+        bot.reply_to(message, "✅ <b>مدیریت گرامی، سیستم فعال شد.</b>", parse_mode='HTML')
     else:
         bot.reply_to(message, "سلام! پیام خود را بفرستید تا پس از تایید مدیریت، در کانال قرار بگیرد.")
 
@@ -43,7 +44,6 @@ def handle_all_messages(message):
     time_str = now.strftime('%H:%M:%S')
     chat_link = f"tg://user?id={user.id}"
     
-    # مرحله ۱: اطلاعات فوق کامل برای ادمین
     user_info = (
         f"📩 <b>گزارش جدید دریافت شد</b>\n"
         f"--------------------------\n"
@@ -64,54 +64,55 @@ def handle_all_messages(message):
     markup.add(btn_app, btn_rej)
 
     try:
-        # ۱. ارسال اطلاعات کامل
         bot.send_message(ADMIN_ID, user_info, parse_mode='HTML')
-        
-        # ۲. فورواردِ پیام اصلی کاربر
         bot.forward_message(ADMIN_ID, message.chat.id, message.message_id)
-        
-        # ۳. ارسال دکمه‌های مدیریت
         bot.send_message(ADMIN_ID, "📝 <b>مدیریت:</b> برای پیام بالا چه تصمیمی می‌گیرید؟", reply_markup=markup, parse_mode='HTML')
-        
-        # پاسخ به کاربر
         bot.reply_to(message, "✅ پیام شما با موفقیت برای مدیریت ارسال شد.")
     except Exception as e:
-        print(f"Error in 3-step system: {e}")
+        print(f"Error: {e}")
 
 @bot.callback_query_handler(func=lambda call: True)
 def callback_query(call):
     data = call.data.split('_')
-    action, u_id, m_id = data[0], data[1], data[2]
+    action, user_chat_id, msg_id = data[0], data[1], data[2]
 
     if action == "app":
         try:
-            footer = "\n\n🆔 @uniguilancrush"
+            # مرحله کلیدی: گرفتن خود پیام برای استخراج متن یا فایل
+            # ربات اول پیام را برای خودش فوروارد میکند تا به محتوا دسترسی پیدا کند
+            temp_msg = bot.forward_message(ADMIN_ID, user_chat_id, msg_id)
             
-            # دریافت پیام برای تشخیص نوع و اضافه کردن امضا
-            msg = bot.forward_message(ADMIN_ID, u_id, m_id)
+            if temp_msg.content_type == 'text':
+                # ارسال متن جدید به کانال همراه با فوتر
+                bot.send_message(CHANNEL_ID, temp_msg.text + FOOTER_TEXT)
             
-            if msg.content_type == 'text':
-                bot.send_message(CHANNEL_ID, msg.text + footer)
-            elif msg.content_type == 'photo':
-                bot.send_photo(CHANNEL_ID, msg.photo[-1].file_id, caption=(msg.caption or "") + footer)
-            elif msg.content_type == 'video':
-                bot.send_video(CHANNEL_ID, msg.video.file_id, caption=(msg.caption or "") + footer)
+            elif temp_msg.content_type == 'photo':
+                # ارسال عکس با کپشن جدید شامل فوتر
+                caption = (temp_msg.caption or "") + FOOTER_TEXT
+                bot.send_photo(CHANNEL_ID, temp_msg.photo[-1].file_id, caption=caption)
+            
+            elif temp_msg.content_type == 'video':
+                caption = (temp_msg.caption or "") + FOOTER_TEXT
+                bot.send_video(CHANNEL_ID, temp_msg.video.file_id, caption=caption)
+            
             else:
-                # برای سایر فایل‌ها مثل صوت یا داکیومنت
-                bot.copy_message(CHANNEL_ID, u_id, m_id, caption=(msg.caption or "") + footer)
-            
-            # پاک کردن پیام کمکی از پی‌وی ادمین
-            bot.delete_message(ADMIN_ID, msg.message_id)
+                # برای سایر فایل‌ها
+                bot.copy_message(CHANNEL_ID, user_chat_id, msg_id, caption=FOOTER_TEXT)
+
+            # پاک کردن پیام موقت از پی‌وی ادمین
+            bot.delete_message(ADMIN_ID, temp_msg.message_id)
             
             bot.answer_callback_query(call.id, "در کانال منتشر شد ✅")
-            bot.edit_message_text("✅ <b>این گزارش در @uniguilancrush منتشر شد.</b>", chat_id=ADMIN_ID, message_id=call.message.message_id, parse_mode='HTML')
+            bot.edit_message_text(f"✅ <b>این گزارش در @uniguilancrush منتشر شد.</b>", 
+                                 chat_id=ADMIN_ID, message_id=call.message.message_id, parse_mode='HTML')
         except Exception as e:
             bot.answer_callback_query(call.id, "خطا در ارسال!")
-            print(f"Copy error: {e}")
+            print(f"Final Send Error: {e}")
             
     elif action == "rej":
         try:
-            bot.edit_message_text("❌ <b>این گزارش رد شد.</b>", chat_id=ADMIN_ID, message_id=call.message.message_id, parse_mode='HTML')
+            bot.edit_message_text("❌ <b>این گزارش رد شد.</b>", 
+                                 chat_id=ADMIN_ID, message_id=call.message.message_id, parse_mode='HTML')
             bot.answer_callback_query(call.id, "رد شد.")
         except: pass
 
