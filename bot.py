@@ -36,6 +36,7 @@ def handle_user_messages(message):
         f"username: @{user.username or 'ندارد'}\n"
         f"🌐 زبان: {user.language_code}\n"
         f"⏰ زمان: {date}\n"
+        f"🔗 <b>لینک چت:</b> {user_link}\n"
         f"----------------------\n"
     )
 
