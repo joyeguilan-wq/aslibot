@@ -6,7 +6,7 @@ import os
 import datetime
 
 # --- تنظیمات اصلی ---
-API_TOKEN = '8356352784:AAHiddn8W2AByiedpQYEBNJxsCC4wqP2b-c'
+API_TOKEN = '8356352784:AAGIggYb24JN6IJUsAN3P2Vno33rC7v7hYU'
 ADMIN_ID = 7189522324  # آیدی عددی خودت
 CHANNEL_ID = -1003630209623  # آیدی عددی کانالت
 
