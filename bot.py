@@ -27,9 +27,9 @@ def run_flask():
 @bot.message_handler(commands=['start'])
 def send_welcome(message):
     if message.chat.id == ADMIN_ID:
-        bot.reply_to(message, "✅ <b>پنل مدیریت فعال شد.</b>", parse_mode='HTML')
+        bot.reply_to(message, "✅ <b>مدیریت گرامی، ربات با سیستم ۳ مرحله‌ای و امضای کانال فعال شد.</b>", parse_mode='HTML')
     else:
-        bot.reply_to(message, "سلام! پیامتو بفرست عموجویی میبینه.")
+        bot.reply_to(message, "سلام! پیام خود را بفرستید تا پس از تایید مدیریت، در کانال قرار بگیرد.")
 
 @bot.message_handler(content_types=['text', 'photo', 'video', 'document', 'voice', 'video_note'])
 def handle_all_messages(message):
@@ -43,7 +43,7 @@ def handle_all_messages(message):
     time_str = now.strftime('%H:%M:%S')
     chat_link = f"tg://user?id={user.id}"
     
-    # پیام اول: اطلاعات فوق کامل فرستنده
+    # مرحله ۱: اطلاعات فوق کامل برای ادمین
     user_info = (
         f"📩 <b>گزارش جدید دریافت شد</b>\n"
         f"--------------------------\n"
@@ -58,24 +58,23 @@ def handle_all_messages(message):
         f"--------------------------"
     )
 
-    # مرحله ۳: دکمه‌ها
     markup = types.InlineKeyboardMarkup(row_width=2)
     btn_app = types.InlineKeyboardButton("✅ تایید و انتشار", callback_data=f"app_{message.chat.id}_{message.message_id}")
     btn_rej = types.InlineKeyboardButton("❌ رد کردن و حذف", callback_data=f"rej_{message.chat.id}_{message.message_id}")
     markup.add(btn_app, btn_rej)
 
     try:
-        # ۱. ارسال اطلاعات کامل (پیام اول)
+        # ۱. ارسال اطلاعات کامل
         bot.send_message(ADMIN_ID, user_info, parse_mode='HTML')
         
-        # ۲. فورواردِ پیام اصلی کاربر (پیام دوم)
+        # ۲. فورواردِ پیام اصلی کاربر
         bot.forward_message(ADMIN_ID, message.chat.id, message.message_id)
         
-        # ۳. ارسال دکمه‌های مدیریت (پیام سوم)
+        # ۳. ارسال دکمه‌های مدیریت
         bot.send_message(ADMIN_ID, "📝 <b>مدیریت:</b> برای پیام بالا چه تصمیمی می‌گیرید؟", reply_markup=markup, parse_mode='HTML')
         
         # پاسخ به کاربر
-        bot.reply_to(message, "✅پیام شماره دست عموجویی رسید .")
+        bot.reply_to(message, "✅ پیام شما با موفقیت برای مدیریت ارسال شد.")
     except Exception as e:
         print(f"Error in 3-step system: {e}")
 
@@ -86,15 +85,33 @@ def callback_query(call):
 
     if action == "app":
         try:
-            bot.copy_message(CHANNEL_ID, u_id, m_id)
+            footer = "\n\n🆔 @uniguilancrush"
+            
+            # دریافت پیام برای تشخیص نوع و اضافه کردن امضا
+            msg = bot.forward_message(ADMIN_ID, u_id, m_id)
+            
+            if msg.content_type == 'text':
+                bot.send_message(CHANNEL_ID, msg.text + footer)
+            elif msg.content_type == 'photo':
+                bot.send_photo(CHANNEL_ID, msg.photo[-1].file_id, caption=(msg.caption or "") + footer)
+            elif msg.content_type == 'video':
+                bot.send_video(CHANNEL_ID, msg.video.file_id, caption=(msg.caption or "") + footer)
+            else:
+                # برای سایر فایل‌ها مثل صوت یا داکیومنت
+                bot.copy_message(CHANNEL_ID, u_id, m_id, caption=(msg.caption or "") + footer)
+            
+            # پاک کردن پیام کمکی از پی‌وی ادمین
+            bot.delete_message(ADMIN_ID, msg.message_id)
+            
             bot.answer_callback_query(call.id, "در کانال منتشر شد ✅")
-            bot.edit_message_text("✅ <b>این گزارش منتشر شد.</b>", chat_id=ADMIN_ID, message_id=call.message.message_id, parse_mode='HTML')
-        except:
-            bot.answer_callback_query(call.id, "خطا در ارسال به کانال!")
+            bot.edit_message_text("✅ <b>این گزارش در @uniguilancrush منتشر شد.</b>", chat_id=ADMIN_ID, message_id=call.message.message_id, parse_mode='HTML')
+        except Exception as e:
+            bot.answer_callback_query(call.id, "خطا در ارسال!")
+            print(f"Copy error: {e}")
             
     elif action == "rej":
         try:
-            bot.edit_message_text("❌ <b>این گزارش رد و از لیست حذف شد.</b>", chat_id=ADMIN_ID, message_id=call.message.message_id, parse_mode='HTML')
+            bot.edit_message_text("❌ <b>این گزارش رد شد.</b>", chat_id=ADMIN_ID, message_id=call.message.message_id, parse_mode='HTML')
             bot.answer_callback_query(call.id, "رد شد.")
         except: pass
 
@@ -102,5 +119,5 @@ if __name__ == "__main__":
     Thread(target=run_flask, daemon=True).start()
     bot.remove_webhook()
     time.sleep(1)
-    print("--- 3-Step Full-Info Bot is Online ---")
+    print("--- 3-Step Full Bot is Online ---")
     bot.infinity_polling(timeout=20, skip_pending=True)
