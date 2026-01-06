@@ -73,7 +73,7 @@ def callback_query(call):
         bot.answer_callback_query(call.id, "پیام رد شد ❌")
         bot.delete_message(ADMIN_ID, call.message.message_id)
 
-if name == "main":
+if __name__ == "__main__":
     t = Thread(target=run_flask)
     t.daemon = True
     t.start()
