@@ -103,7 +103,7 @@ if __name__ == "__main__":
     # رفع تداخل ۴۰۹ و پاکسازی وب‌هوک
     bot.remove_webhook()
     time.sleep(1)
-    
+
     print("--- Robot is Starting ---")
-    # شروع پولینگ بدون در نظر گرفتن پیام‌های زمان آفلاین بودن
-    bot.polling(none_stop=True, skip_pending=True)
+    # استفاده از این دستور تداخل 409 رو به صورت خودکار حل می‌کنه
+    bot.infinity_polling(timeout=20, long_polling_timeout=10, skip_pending=True)
