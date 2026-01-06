@@ -4,6 +4,7 @@ from flask import Flask
 from threading import Thread
 import os
 import datetime
+import pytz
 import time
 
 # ================= تنظیمات اختصاصی شما =================
@@ -26,19 +27,23 @@ def run_flask():
 @bot.message_handler(commands=['start'])
 def send_welcome(message):
     if message.chat.id == ADMIN_ID:
-        bot.reply_to(message, "✅ **درود مدیریت!**\nربات آنلاین است و آماده دریافت گزارش‌ها می‌باشد.")
+        bot.reply_to(message, "✅ **درود مدیریت!**\nربات با موفقیت فعال شد و ساعت آن بر اساس وقت تهران تنظیم گردید.")
     else:
         bot.reply_to(message, "سلام! پیام یا تصویر خود را بفرستید تا پس از تایید مدیریت، در کانال قرار بگیرد.")
 
 @bot.message_handler(content_types=['text', 'photo'])
 def handle_all_messages(message):
-    # پیام‌های خود شما برای خودتون فوروارد نمیشه
+    # پیام‌های خود شما (ادمین) نادیده گرفته می‌شود
     if message.chat.id == ADMIN_ID:
         return
 
     user = message.from_user
-    now = datetime.datetime.now()
-    time_str = now.strftime('%H:%M')
+    
+    # تنظیم ساعت دقیق به وقت تهران
+    tehran_tz = pytz.timezone('Asia/Tehran')
+    now = datetime.datetime.now(tehran_tz)
+    time_str = now.strftime('%H:%M:%S')
+    
     chat_link = f"tg://user?id={user.id}"
     
     user_info = (
@@ -49,7 +54,7 @@ def handle_all_messages(message):
         f"🆔 **آیدی عددی:** `{user.id}`\n"
         f"🆔 **یوزرنیم:** @{user.username or 'ندارد'}\n"
         f"🌐 **زبان:** {user.language_code or 'نامشخص'}\n"
-        f"⏰ **ساعت:** {time_str}\n\n"
+        f"⏰ **ساعت (تهران):** {time_str}\n\n"
         f"🔗 [لینک چت مستقیم با کاربر]({chat_link})\n"
         f"--------------------------\n"
     )
@@ -67,7 +72,7 @@ def handle_all_messages(message):
         
         bot.reply_to(message, "✅ پیام شما با موفقیت برای مدیریت ارسال شد.")
     except Exception as e:
-        print(f"Error sending to admin: {e}")
+        print(f"Error: {e}")
 
 @bot.callback_query_handler(func=lambda call: True)
 def callback_query(call):
@@ -84,8 +89,7 @@ def callback_query(call):
             else:
                 bot.edit_message_text(final_text, chat_id=ADMIN_ID, message_id=call.message.message_id)
         except Exception as e:
-            bot.answer_callback_query(call.id, "خطا! ربات در کانال ادمین نیست.")
-            print(f"Copy Error: {e}")
+            bot.answer_callback_query(call.id, "خطا در ارسال به کانال!")
     elif action == "rej":
         try:
             bot.delete_message(ADMIN_ID, call.message.message_id)
@@ -93,13 +97,13 @@ def callback_query(call):
         except: pass
 
 if __name__ == "__main__":
-    # اجرای وب‌سرور
+    # اجرای Flask در پس‌زمینه
     Thread(target=run_flask, daemon=True).start()
     
-    # حل مشکل 409: ابتدا حذف وب‌هوک احتمالی و انتظار کوتاه
+    # رفع تداخل ۴۰۹ و پاکسازی وب‌هوک
     bot.remove_webhook()
     time.sleep(1)
     
     print("--- Robot is Starting ---")
-    # شروع پولینگ با نادیده گرفتن پیام‌های قدیمی (skip_pending)
+    # شروع پولینگ بدون در نظر گرفتن پیام‌های زمان آفلاین بودن
     bot.polling(none_stop=True, skip_pending=True)
