@@ -22,18 +22,18 @@ def home():
 
 def run_flask():
     port = int(os.environ.get("PORT", 8080))
-    app.run(host='0.0.0.0', port=port)
+    app.run(host='0.0.0.0', port=port, debug=False)
 
 @bot.message_handler(commands=['start'])
 def send_welcome(message):
     if message.chat.id == ADMIN_ID:
-        bot.reply_to(message, "✅ <b>درود مدیریت!</b>\nربات آنلاین است و پیام‌های کاربران را برای شما می‌فرستد.", parse_mode='HTML')
+        bot.reply_to(message, "✅ <b>درود مدیریت!</b>\nربات آماده دریافت گزارش‌ها و فوروارد پیام کاربران است.", parse_mode='HTML')
     else:
         bot.reply_to(message, "سلام! پیام یا تصویر خود را بفرستید تا پس از تایید مدیریت، در کانال قرار بگیرد.")
 
-@bot.message_handler(content_types=['text', 'photo'])
+@bot.message_handler(content_types=['text', 'photo', 'video', 'document'])
 def handle_all_messages(message):
-    # پیام‌های خود ادمین برای خودش فوروارد نمی‌شود
+    # پیام‌های ادمین برای خودش فوروارد نشود
     if message.chat.id == ADMIN_ID:
         return
 
@@ -41,37 +41,34 @@ def handle_all_messages(message):
     tehran_tz = pytz.timezone('Asia/Tehran')
     now = datetime.datetime.now(tehran_tz)
     time_str = now.strftime('%H:%M:%S')
-    
     chat_link = f"tg://user?id={user.id}"
     
-    # استفاده از HTML برای جلوگیری از ارور کاراکترهای خاص
+    # آماده‌سازی اطلاعات فرستنده
     user_info = (
-        f"📩 <b>پیام جدید دریافت شد</b>\n"
-        f"--------------------------\n"
-        f"👤 <b>نام:</b> {user.first_name or '---'}\n"
-        f"👤 <b>فامیل:</b> {user.last_name or 'ندارد'}\n"
+        f"📩 <b>اطلاعات فرستنده:</b>\n"
+        f"👤 <b>نام:</b> {user.first_name} {user.last_name or ''}\n"
         f"🆔 <b>آیدی:</b> <code>{user.id}</code>\n"
-        f"🆔 <b>یوزرنیم:</b> @{user.username or 'ندارد'}\n"
-        f"🌐 <b>زبان:</b> {user.language_code or '---'}\n"
-        f"⏰ <b>ساعت:</b> {time_str}\n\n"
+        f"⏰ <b>ساعت:</b> {time_str}\n"
         f"🔗 <a href='{chat_link}'>ورود به پی‌وی کاربر</a>\n"
-        f"--------------------------\n"
     )
 
+    # ایجاد دکمه‌های تایید و رد
     markup = types.InlineKeyboardMarkup(row_width=2)
-    btn_app = types.InlineKeyboardButton("✅ تایید و ارسال", callback_data=f"app_{message.chat.id}_{message.message_id}")
-    btn_rej = types.InlineKeyboardButton("❌ رد کردن و حذف", callback_data=f"rej_{message.chat.id}_{message.message_id}")
+    btn_app = types.InlineKeyboardButton("✅ تایید و ارسال به کانال", callback_data=f"app_{message.chat.id}_{message.message_id}")
+    btn_rej = types.InlineKeyboardButton("❌ رد کردن", callback_data=f"rej_{message.chat.id}_{message.message_id}")
     markup.add(btn_app, btn_rej)
 
     try:
-        if message.text:
-            bot.send_message(ADMIN_ID, user_info + "📝 <b>متن پیام:</b>\n" + message.text, reply_markup=markup, parse_mode='HTML')
-        elif message.photo:
-            bot.send_photo(ADMIN_ID, message.photo[-1].file_id, caption=user_info + "🖼 <b>توضیحات:</b>\n" + (message.caption or "بدون توضیح"), reply_markup=markup, parse_mode='HTML')
+        # ۱. ابتدا اطلاعات کاربر را همراه با دکمه‌ها برای ادمین می‌فرستیم
+        bot.send_message(ADMIN_ID, user_info, reply_markup=markup, parse_mode='HTML')
         
+        # ۲. بلافاصله پیام اصلی کاربر را برای ادمین فوروارد می‌کنیم
+        bot.forward_message(ADMIN_ID, message.chat.id, message.message_id)
+        
+        # ۳. پاسخ به کاربر
         bot.reply_to(message, "✅ پیام شما با موفقیت برای مدیریت ارسال شد.")
     except Exception as e:
-        print(f"Send Error: {e}")
+        print(f"Error in forwarding: {e}")
 
 @bot.callback_query_handler(func=lambda call: True)
 def callback_query(call):
@@ -80,28 +77,29 @@ def callback_query(call):
 
     if action == "app":
         try:
+            # کپی پیام کاربر به کانال
             bot.copy_message(CHANNEL_ID, u_id, m_id)
-            bot.answer_callback_query(call.id, "ارسال شد ✅")
-            final_text = "✅ این پیام تایید و به کانال فرستاده شد."
-            if call.message.photo:
-                bot.edit_message_caption(final_text, chat_id=ADMIN_ID, message_id=call.message.message_id)
-            else:
-                bot.edit_message_text(final_text, chat_id=ADMIN_ID, message_id=call.message.message_id)
-        except:
-            bot.answer_callback_query(call.id, "خطا در ارسال!")
+            bot.answer_callback_query(call.id, "در کانال منتشر شد ✅")
+            bot.edit_message_text("✅ این پیام تایید و به کانال فرستاده شد.", chat_id=ADMIN_ID, message_id=call.message.message_id)
+        except Exception as e:
+            bot.answer_callback_query(call.id, "خطا در ارسال به کانال!")
+            print(f"Channel Copy Error: {e}")
+            
     elif action == "rej":
         try:
-            bot.delete_message(ADMIN_ID, call.message.message_id)
+            bot.edit_message_text("❌ این پیام توسط شما رد شد.", chat_id=ADMIN_ID, message_id=call.message.message_id)
             bot.answer_callback_query(call.id, "رد شد ❌")
-        except: pass
+        except:
+            pass
 
 if __name__ == "__main__":
+    # اجرای وب‌سرور در ترد جداگانه
     Thread(target=run_flask, daemon=True).start()
     
-    # پاکسازی وب‌هوک برای رفع ارور تداخل
+    # پاکسازی تداخل‌های احتمالی
     bot.remove_webhook()
-    time.sleep(2)
+    time.sleep(1)
     
     print("--- Robot is Starting ---")
-    # استفاده از infinity_polling برای پایداری در رندر
-    bot.infinity_polling(timeout=20, long_polling_timeout=10, skip_pending=True)
+    # شروع به کار ربات به صورت هوشمند و بدون توقف
+    bot.infinity_polling(timeout=20, skip_pending=True)
