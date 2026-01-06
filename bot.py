@@ -30,7 +30,7 @@ def send_welcome(message):
     if message.chat.id == ADMIN_ID:
         bot.reply_to(message, "✅ <b>مدیریت گرامی، سیستم فعال شد.</b>", parse_mode='HTML')
     else:
-        bot.reply_to(message, "سلام! پیام خود را بفرستید تا پس از تایید مدیریت، در کانال قرار بگیرد.")
+        bot.reply_to(message, "سلام! پیامی که میفرستی میره برای عموجویی .")
 
 @bot.message_handler(content_types=['text', 'photo', 'video', 'document', 'voice', 'video_note'])
 def handle_all_messages(message):
@@ -67,7 +67,7 @@ def handle_all_messages(message):
         bot.send_message(ADMIN_ID, user_info, parse_mode='HTML')
         bot.forward_message(ADMIN_ID, message.chat.id, message.message_id)
         bot.send_message(ADMIN_ID, "📝 <b>مدیریت:</b> برای پیام بالا چه تصمیمی می‌گیرید؟", reply_markup=markup, parse_mode='HTML')
-        bot.reply_to(message, "✅ پیام شما با موفقیت برای مدیریت ارسال شد.")
+        bot.reply_to(message, "✅ پیامت رسید به دست جویی.")
     except Exception as e:
         print(f"Error: {e}")
 
