@@ -8,7 +8,7 @@ import datetime
 # --- تنظیمات اصلی ---
 API_TOKEN = '8356352784:AAGAvb2SWwEFuhN3_z58deaB7R9RtrX2y2Y'
 ADMIN_ID = 7189522324  # آیدی عددی خودت
-CHANNEL_ID = -3630209623  # آیدی عددی کانالت
+CHANNEL_ID = -1003630209623  # آیدی عددی کانالت
 
 bot = telebot.TeleBot(API_TOKEN)
 app = Flask('')
@@ -50,7 +50,7 @@ def handle_user_messages(message):
     elif message.photo:
         bot.send_photo(ADMIN_ID, message.photo[-1].file_id, caption=user_info + "توضیحات عکس:\n" + (message.caption or "ندارد"), reply_markup=markup)
     
-    bot.reply_to(message, "سپاس؛ پیام شما دریافت شد و پس از تایید مدیریت در کانال قرار می‌گیرد.")
+    bot.reply_to(message, "پیامت به دستم میرسه ممنون:) \n\nعموجویی")
 
 # --- مدیریت دکمه‌ها ---
 @bot.callback_query_handler(func=lambda call: True)
